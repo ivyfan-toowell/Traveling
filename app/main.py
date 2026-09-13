@@ -7,6 +7,8 @@ FastAPI 应用入口
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pathlib import Path
 from app.utils.logger import app_logger
 from app.api.v1 import conversations, chat, users
 from app.config import settings
@@ -71,6 +73,11 @@ app.include_router(chat.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
+    return FileResponse(Path(__file__).resolve().parent.parent / "zhixing.html")
+
+
+@app.get("/health")
+async def health():
     return {
         "service": "Travel Planner",
         "docs": "/docs",

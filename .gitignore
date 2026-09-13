@@ -9,6 +9,7 @@ dist/
 
 # ===== 虚拟环境 =====
 .venv/
+.venv-*/
 .venv1/
 venv/
 env/

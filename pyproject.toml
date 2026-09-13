@@ -19,7 +19,7 @@ dependencies = [
     # 数据库
     "psycopg[binary,pool]==3.3.2",
     "redis==5.0.0",
-    "chromadb==0.5.23",
+    "chromadb==1.0.20",
 
     # Web 框架
     "fastapi==0.124.4",
@@ -29,7 +29,7 @@ dependencies = [
     "aiofiles==24.1.0",
 
     # RAG 相关
-    "langchain-chroma==0.2.3",
+    "langchain-chroma==0.2.6",
     "sentence-transformers==3.3.0",
     "rank-bm25==0.2.2",
     "jieba==0.42.1",

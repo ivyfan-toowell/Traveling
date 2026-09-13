@@ -3,6 +3,8 @@
 整合所有优化策略
 """
 import os
+import hashlib
+import json
 from typing import List
 from dotenv import load_dotenv
 from langchain_core.documents import Document
@@ -68,7 +70,12 @@ class AdvancedRAGPipeline:
         self.context_reorder = LongContextReorder()
 
         # 6. 缓存层
-        self.cache = RAGCache(enabled=enable_cache)
+        corpus = json.dumps(
+            [{"content": doc.page_content, "metadata": doc.metadata} for doc in all_documents],
+            ensure_ascii=False, sort_keys=True,
+        )
+        corpus_hash = hashlib.sha256(corpus.encode("utf-8")).hexdigest()
+        self.cache = RAGCache(enabled=enable_cache, namespace=corpus_hash)
 
     def retrieve(self, query: str) -> List[Document]:
         """

@@ -24,10 +24,12 @@ class RAGCache:
     def __init__(
             self,
             ttl: int = 3600,  # 缓存过期时间（秒）
-            enabled: bool = True
+            enabled: bool = True,
+            namespace: str = "default"
     ):
         self.ttl = ttl
         self.enabled = enabled
+        self.namespace = namespace
 
         if enabled:
             try:
@@ -47,7 +49,7 @@ class RAGCache:
 
     def _generate_key(self, query: str, top_k: int) -> str:
         """生成缓存 key"""
-        content = f"{query}__k{top_k}"
+        content = f"{self.namespace}__{query}__k{top_k}"
         hash_value = hashlib.md5(content.encode()).hexdigest()
         return f"rag:cache:.{hash_value}"
 

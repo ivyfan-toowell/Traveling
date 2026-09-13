@@ -4,7 +4,7 @@
 """
 import asyncio
 from app.rag.document_loader import DocumentManager
-from app.rag.text_splitter import ParentDocumentSplitter
+from app.rag.text_splitter import AdvancedParentDocumentSplitter
 from app.rag.vectorstore import VectorStoreManager
 from app.utils.logger import app_logger
 
@@ -17,15 +17,14 @@ async def main():
     # ========== 1. 加载文档 ==========
     app_logger.info("加载文档...")
     doc_manager = DocumentManager()
-    documents = doc_manager.load_destination_documents()
+    documents = doc_manager.load_all_documents()
 
     if not documents:
-        app_logger.error("未找到文档，请先添加文档到 data/documents/destinations/")
-        return
+        raise RuntimeError("知识库为空，请先添加 UTF-8 Markdown 文件到 data/documents/ 的三类目录")
 
     # ========== 2. 切分文档 ==========
     app_logger.info("切分文档...")
-    splitter = ParentDocumentSplitter()
+    splitter = AdvancedParentDocumentSplitter()
     parent_docs, child_docs = splitter.split_documents(documents)
 
     # ========== 3. 创建向量数据库 ==========
@@ -35,8 +34,7 @@ async def main():
     vectorstore = vs_manager.create_vectorstore(child_docs)
 
     # ========== 4. 保存父文档映射（用于后续检索） ==========
-    # 在实际应用中，需要将 parent_docs 也存储到数据库
-    # 这里简化处理
+    # 父文档映射在运行时从同一批 MD 重新生成；source 使用相对路径，支持不同机器。
 
     app_logger.info("RAG 系统初始化完成！")
     app_logger.info(f"   - 文档数量：{len(documents)}")

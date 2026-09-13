@@ -2,22 +2,24 @@
 向量数据库管理
 """
 
+import hashlib
+import json
 from typing import List
 from pathlib import Path
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_community.embeddings import DashScopeEmbeddings
-from app.config import settings
+from app.config import BASE_DIR, settings
 from app.utils.logger import app_logger
 
 class VectorStoreManager:
     """向量数据库管理器"""
     def __init__(
             self,
-            persist_directory:str = "data/vectorstore",
+            persist_directory:str = None,
             collection_name:str = "travel_guides"
     ):
-        self.persist_directory = Path(persist_directory)
+        self.persist_directory = Path(persist_directory) if persist_directory else Path(BASE_DIR) / "data" / "vectorstore"
         self.collection_name = collection_name
 
         self.persist_directory.mkdir(parents=True, exist_ok=True)
@@ -33,20 +35,31 @@ class VectorStoreManager:
             self,
             documents: List[Document],
     ) -> Chroma:
-        """创建向量数据库"""
+        """同步全部文档；首次建库，重复执行不重复写入，更新后移除旧分块。"""
+        if not documents:
+            raise RuntimeError("知识库为空，请在 data/documents/ 的三类目录中添加 UTF-8 Markdown 文件")
 
-        app_logger.info(f"创建向量数据库（{len(documents)} 个文档）...")
+        vectorstore = self.get_vectorstore()
+        desired = {}
+        for doc in documents:
+            payload = json.dumps(
+                {"content": doc.page_content, "metadata": doc.metadata},
+                ensure_ascii=False, sort_keys=True,
+            )
+            document_id = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+            desired[document_id] = doc
 
-        self.vectorstore = Chroma.from_documents(
-            documents=documents,
-            embedding=self.embeddings,
-            persist_directory=str(self.persist_directory),
-            collection_name=self.collection_name
-        )
+        existing_ids = set(vectorstore.get(include=[])["ids"])
+        new_ids = sorted(set(desired) - existing_ids)
+        # 先写入新分块；Embedding 接口失败时保留已有索引，便于重试。
+        if new_ids:
+            vectorstore.add_documents([desired[doc_id] for doc_id in new_ids], ids=new_ids)
+        stale_ids = sorted(existing_ids - set(desired))
+        if stale_ids:
+            vectorstore.delete(ids=stale_ids)
 
-        app_logger.info("✅ 向量数据库创建完成")
-
-        return self.vectorstore
+        app_logger.info(f"✅ 向量库同步完成: 新增 {len(new_ids)}，移除 {len(stale_ids)}，总计 {len(desired)} 个分块")
+        return vectorstore
 
     def load_vectorstore(self) ->Chroma:
         """加载已有向量数据库"""

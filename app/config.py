@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # ============== 应用基础配置 ==============
     app_env: str = Field(default="development", alias="APP_ENV")
     app_host: str = Field(default="0.0.0.0", alias="APP_HOST")
-    app_port: int = Field(default=8000, alias="APP_PORT")
+    app_port: int = Field(default=14726, alias="APP_PORT")
     debug: bool = Field(default=False, alias="DEBUG")
     cors_origins: str = Field(
         default="http://localhost:8000,http://127.0.0.1:8000,http://localhost:14726,http://127.0.0.1:14726",
@@ -36,9 +36,9 @@ class Settings(BaseSettings):
     qwen_max_tokens: int = 8000
 
     # ============== LangSmith 配置 ==============
-    langsmith_api_key: str = Field(alias="LANGSMITH_API_KEY")
+    langsmith_api_key: str = Field(default="", alias="LANGSMITH_API_KEY")
     langsmith_project: str = Field(default="travel-planner-dev", alias="LANGSMITH_PROJECT")
-    langsmith_tracing: bool = Field(default=True, alias="LANGSMITH_TRACING")
+    langsmith_tracing: bool = Field(default=False, alias="LANGSMITH_TRACING")
     langsmith_endpoint: str = Field(
         default="https://api.smith.langchain.com",
         alias="LANGSMITH_ENDPOINT"

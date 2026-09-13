@@ -36,6 +36,7 @@ COPY --from=builder /opt/venv /opt/venv
 COPY app /app/app
 COPY scripts /app/scripts
 COPY data /app/data
+COPY zhixing.html /app/zhixing.html
 
 # 设置环境变量
 ENV PATH="/opt/venv/bin:$PATH"
@@ -48,7 +49,7 @@ EXPOSE ${APP_PORT}
 
 # 使用 Python 标准库执行健康检查，不依赖 curl/apt 软件包。
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('APP_PORT', '14726') + '/', timeout=5)"
+    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('APP_PORT', '14726') + '/health', timeout=5)"
 
 # 启动命令（使用环境变量）
 CMD uvicorn app.main:app --host 0.0.0.0 --port ${APP_PORT}

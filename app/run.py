@@ -17,13 +17,14 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 import uvicorn
+from app.config import settings
 
 if __name__ == "__main__":
     # 关键：使用 uvicorn.Server 手动运行，而不是 uvicorn.run()
     config = uvicorn.Config(
         "app.main:app",
-        host="0.0.0.0",
-        port=8000,
+        host=settings.app_host,
+        port=settings.app_port,
         reload=False,
         loop="none",  # 关键！告诉 uvicorn 不要创建新的事件循环
     )

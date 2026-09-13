@@ -95,8 +95,17 @@ class MCPClientManager:
             app_logger.warning("⚠️ MCP 客户端已初始化，跳过")
             return
 
-        # 默认启用所有服务
-        servers = servers or list(self.SERVER_CONFIGS.keys())
+        # 只为已配置密钥的远程服务加载工具，保留无密钥的自建服务和 12306。
+        if servers is None:
+            required_keys = {
+                "amap": "AMAP_API_KEY",
+                "VariFlight-Aviation": "VARIFLIGHT_API_KEY",
+                "aigohotel-mcp": "AIGOHOTEL_MCP_API",
+            }
+            servers = [
+                name for name in self.SERVER_CONFIGS
+                if name not in required_keys or os.getenv(required_keys[name], "").strip()
+            ]
         configs = {k: v for k, v in self.SERVER_CONFIGS.items() if k in servers}
 
         app_logger.info(f"初始化 MCP: {list(configs.keys())}")
@@ -104,13 +113,18 @@ class MCPClientManager:
         # 创建客户端
         self._client = MultiServerMCPClient(configs)
 
-        # 预加载工具
-        try:
-            self._tools = await self._client.get_tools()
-            app_logger.info(f"✅ 已加载 {len(self._tools)} 个 MCP 工具")
-        except Exception as e:
-            app_logger.warning(f"⚠️ 预加载工具失败: {e}")
-            self._tools = []
+        # 单个服务失败不会清空其他服务的工具；限制工具发现的等待时间。
+        async def load_server_tools(name):
+            try:
+                return await asyncio.wait_for(self._client.get_tools(server_name=name), timeout=20)
+            except Exception as exc:
+                # 不打印可能含密钥的服务 URL 或异常内容。
+                app_logger.warning(f"⚠️ MCP 服务 {name} 工具加载失败: {type(exc).__name__}")
+                return []
+
+        groups = await asyncio.gather(*(load_server_tools(name) for name in configs))
+        self._tools = [tool for group in groups for tool in group]
+        app_logger.info(f"✅ 已加载 {len(self._tools)} 个 MCP 工具")
 
     async def close(self):
         """关闭客户端"""

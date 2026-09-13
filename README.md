@@ -1,230 +1,219 @@
-# 知行 ZhiXing · 智能旅行规划助手
+﻿# 知行 ZhiXing · 智能旅行规划助手
 
-一个基于 **LangGraph 多 Agent** + **RAG** + **MCP** 的企业级 AI 旅行规划服务,提供从需求收集、目的地推荐、交通/住宿/美食规划,到生成完整行程与预算报告的一站式体验。
+基于 LangGraph / LangChain 多 Agent、RAG 和 MCP 的旅行规划学习项目。后端使用 FastAPI，聊天通过 SSE 返回；前端为单文件页面 `zhixing.html`。
 
-前端为单文件页面 [`zhixing.html`](zhixing.html),后端为 FastAPI + 通义千问(Qwen),对话通过 SSE 流式返回。
+支持需求收集、目的地推荐、交通协调、住宿与美食建议，以及行程和预算报告。对话状态、用户和长期记忆保存在 PostgreSQL 中，RAG 索引使用本地 Chroma。
 
----
+## 项目架构
 
-## ✨ 功能特性
+[![知行项目架构图：API、Agent 编排、RAG、MCP 与持久化](docs/assets/architecture.png)](docs/assets/architecture.png)
 
-- 🤖 **多 Agent 协作(Handoffs)**:主 Agent 通过状态机式的步骤中间件,按「记录需求 → 选择目的地 → 选择交通 → 选择住宿 → 选择美食 → 生成行程 → 汇总预算 → 生成报告」有序推进
-- 🚄 **交通子 Agent**:航班 / 火车 / 自驾三类交通专属子 Agent,由协调器统一调度
-- 🗺️ **目的地路由 Agent**:探索(Explore)与天气(Weather)并行,结合高德地图与天气数据
-- 📚 **高级 RAG 检索**:父文档切分 + Chroma 向量库 + 混合检索 + BM25 重排序,基于 24 篇目的地/住宿/美食语料
-- 🔌 **MCP(Model Context Protocol)**:通过 `fastmcp` + `langchain-mcp-adapters` 接入天气与搜索 MCP Server
-- 💾 **持久化记忆**:LangGraph Checkpointer + Store 基于 PostgreSQL(pgvector)保存对话状态与长期记忆,Redis 缓存加速
-- 🔐 **用户体系**:JWT 认证 + bcrypt 密码哈希,注册 / 登录 / 会话归属校验
-- 📡 **可观测性**:LangSmith 链路追踪 + Prometheus 指标 + loguru 日志
-- 🐳 **容器化**:多阶段 Docker 构建,Docker Compose 一键部署
+点击图片可查看大图。主规划流程由一个 Travel Agent 和步骤中间件驱动；目的地 Router 按查询需求分发 Explore / Weather 节点，交通 Coordinator 调用航班、火车、自驾子 Agent。主 Agent 也可直接使用 RAG、MCP 和长期记忆工具。
 
----
+PostgreSQL 保存业务数据、LangGraph 对话检查点和长期记忆；虽然安装了 pgvector，当前 RAG 的向量检索实际使用本地 Chroma。作者提供的 MD 负责静态知识，云端模型和外部 API / MCP 负责生成与实时查询。
 
-## 🏗️ 系统架构
+## RAG 知识库说明
 
-```mermaid
-flowchart TB
-    FE[zhixing.html 前端] -->|SSE 流式| API[FastAPI 应用]
-    API --> AUTH[JWT 认证]
-    API --> MAIN[主 Agent<br/>状态机中间件]
-    MAIN --> DR[目的地路由 Agent]
-    MAIN --> TC[交通协调 Agent]
-    DR --> EXP[探索 Explore]
-    DR --> WEA[天气 Weather]
-    TC --> FL[航班 Agent]
-    TC --> TR[火车 Agent]
-    TC --> DV[自驾 Agent]
-    MAIN --> RAG[RAG 检索<br/>BM25 重排序]
-    MAIN --> MCP[MCP Client]
-    MCP --> W[天气 MCP Server]
-    MCP --> S[搜索 MCP Server]
-    MAIN --> PG[(PostgreSQL<br/>Checkpointer / Store / pgvector)]
-    MAIN --> RD[(Redis 缓存)]
-    RAG --> CD[(Chroma 向量库)]
-    API -.-> LS[LangSmith 追踪]
+**本项目使用作者自行编写、整理的 Markdown 资料，并随仓库提供；无需另外接入开源知识库。** 克隆仓库后即可获得原始资料。当前包含 8 个目的地（长沙、成都、大理、南京、青岛、上海、西安、新疆），每个目的地提供目的地、美食、住宿三类资料，共 24 篇。
+
+```text
+data/documents/
+├── destinations/    # 景点、城市概况、游玩建议
+├── food/            # 当地美食与餐饮建议
+└── accommodation/   # 住宿区域与酒店建议
 ```
 
----
+这些资料用于学习和功能演示，覆盖范围有限。文档中的票价、酒店价格、营业时间等是静态资料，可能过时；实际出行请核实最新信息。实时天气、地图、搜索、航班和酒店查询由另行配置的外部服务提供。
 
-## 🧰 技术栈
+运行流程为：加载三类 MD → 父子文档切分 → DashScope `text-embedding-v2` 生成向量 → Chroma 与 BM25 混合检索 → 查询优化与重排序 → 返回父文档上下文。
 
-| 类别 | 技术 |
-|------|------|
-| 编排框架 | LangGraph 1.x · LangChain 1.x |
-| LLM | 通义千问 Qwen(DashScope OpenAI 兼容接口,默认 `qwen-max`) |
-| Web 框架 | FastAPI · Uvicorn · SSE 流式 |
-| 数据库 | PostgreSQL(pgvector) · Redis |
-| 向量库 | ChromaDB + sentence-transformers |
-| RAG | 父文档切分 · 混合检索 · BM25 重排序 · jieba 分词 |
-| MCP | fastmcp · langchain-mcp-adapters |
-| 认证 | PyJWT · bcrypt |
-| 可观测性 | LangSmith · Prometheus · loguru |
-| 部署 | Docker · docker-compose · uv |
+- **原始 MD 随仓库上传；`.venv`、`.env`、日志和 `data/vectorstore/` 不上传。** 每个使用者在自己的机器上生成向量索引。
+- **需要自己的 DashScope API Key 和联网环境。** 现有 Embedding、聊天、查询优化及重排序使用云端接口，可能产生费用；项目不提供离线免密钥模式。
+- 首次调用 RAG 工具时自动建库；也可以提前执行初始化命令。初次生成向量可能较慢。
+- 初始化脚本和运行时使用同一套三类资料。索引按内容和相对来源路径生成稳定 ID，重复初始化不会重复添加分块；增改删文档后同步新增分块并移除旧分块。
+- 父文档映射每次初始化从 MD 重建，来源路径相对于 `data/documents/`，避免绑定作者机器的绝对路径。
 
----
+### 添加或更新资料
 
-## 📁 目录结构
+将 **UTF-8 编码的 `.md` 文件**放入以上对应目录，也支持子目录。无需修改代码或训练模型。
 
-```
-travel_planner/
-├── app/
-│   ├── agents/          # 多 Agent(handoffs 主 Agent、目的地路由、交通子 Agent)
-│   ├── api/             # FastAPI 路由(chat / conversations / users)
-│   ├── core/            # 状态、中间件、Checkpointer、Store
-│   ├── mcp_core/        # MCP 客户端与 Server(weather / search)
-│   ├── rag/             # RAG 加载、切分、检索、重排、向量库
-│   ├── tools/           # 业务工具(状态流转、RAG、MCP、交通查询等)
-│   ├── models/          # SQLAlchemy ORM 模型
-│   ├── schemas/         # Pydantic 请求/响应模型
-│   ├── utils/           # 日志、安全工具
-│   ├── config.py        # pydantic-settings 配置
-│   ├── main.py          # FastAPI 入口
-│   └── run.py           # Windows 兼容启动脚本(强制 SelectorEventLoop)
-├── data/documents/      # RAG 语料(目的地 / 住宿 / 美食,共 24 篇)
-├── scripts/             # init_db.py(建库)/ init_rag.py(建向量库)
-├── tests/               # 单元测试
-├── Dockerfile           # 多阶段构建
-├── docker-compose.yml   # 容器编排
-├── requirements.txt     # 依赖清单
-├── pyproject.toml       # 项目元数据
-└── zhixing.html         # 前端页面
-```
-
----
-
-## 🚀 快速开始
-
-### 0. 前置要求
-
-- Python **3.11+**(推荐 3.12)
-- PostgreSQL(需启用 `pgvector` 扩展)
-- Redis
-- 各服务 API Key(见下方「环境变量」)
-
-### 1. 安装依赖
+本地 Python：
 
 ```bash
-# 方式一:使用 uv(推荐,Dockerfile 亦采用)
-pip install uv
-uv pip install -r requirements.txt
-
-# 方式二:直接 pip
-pip install -r requirements.txt
+python -m scripts.init_rag
 ```
 
-### 2. 配置环境变量
+Docker 后端已运行时：
+
+```bash
+docker compose exec backend python -m scripts.init_rag
+docker compose restart backend
+```
+
+本地服务在更新后也需要重启，以刷新内存中的 BM25、父文档映射和检索缓存。单进程首次调用 RAG 会自动同步当前资料；请避免在服务处理查询期间同时运行多个初始化进程。知识库为空时会报出明确错误，不会静默建立空索引。
+
+Redis 缓存按知识库内容使用不同命名空间，修改资料并重启后不会命中旧资料的缓存。现已更新 Chroma 及其 LangChain 集成依赖，以避免旧版在 Windows + Python 3.12 上需要编译 `chroma-hnswlib`。如果此前生成的旧版索引无法打开，请先停止服务、将 `data/vectorstore/` 重命名备份，再运行初始化命令从 MD 建立新索引；不需要修改原始 MD。
+
+## 推荐运行方式：Docker Compose
+
+前置条件：安装并启动 Docker（Windows 可使用 Docker Desktop 的 Linux 容器模式），可访问 Python 包仓库、容器镜像仓库和所配置的 API 服务。
+
+### 1. 克隆并配置
+
+```bash
+git clone https://github.com/ivyfan-toowell/Traveling.git
+cd Traveling
+```
+
+Windows PowerShell：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Linux / macOS：
 
 ```bash
 cp .env.example .env
-# 编辑 .env,填入真实密钥
 ```
 
-> ⚠️ **切勿将 `.env` 提交到仓库**,其中包含真实 API Key。`.env` 已被 `.gitignore` 排除。
-
-### 3. 初始化数据库
+编辑 `.env`，至少设置 `DASHSCOPE_API_KEY`、`POSTGRES_PASSWORD`，并建议设置独立的 `JWT_SECRET_KEY`。可使用 Python 生成随机密钥：
 
 ```bash
-cd scripts
-python init_db.py
+python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-该脚本会依次创建业务表(用户/会话/消息)、LangGraph Checkpointer 与 Store 表,并启用 `pgvector` 扩展。
+`.env.example` 已提供模型名称、地址、端口和数据库名称等默认值。LangSmith 默认关闭，不必提供其密钥。请勿把包含真实密钥的 `.env` 提交到 GitHub。
 
-### 4. 初始化 RAG 向量库
-
-```bash
-python scripts/init_rag.py
-```
-
-加载 `data/documents/` 下的语料,切分并写入 Chroma 向量库。
-
-### 5. 启动服务
-
-```bash
-# Linux / macOS
-uvicorn app.main:app --host 0.0.0.0 --port 14726
-
-# Windows(注意:需使用专用的 run.py 以强制 SelectorEventLoop)
-python -m app.run
-```
-
-启动后访问:
-
-- 前端页面:`http://localhost:14726/`
-- API 文档(Swagger):`http://localhost:14726/docs`
-- 健康检查:`http://localhost:14726/`
-
----
-
-## 🐳 Docker 部署
+### 2. 启动
 
 ```bash
 docker compose up -d --build
 ```
 
-Dockerfile 采用多阶段构建(构建依赖 → 拷贝虚拟环境),并内置健康检查。默认端口为 `14726`。
+Compose 会启动 PostgreSQL（带 pgvector）和 Redis，等待数据库就绪，运行 `init-db` 初始化业务表、Checkpointer、Store 和扩展，成功后启动后端。`init-db` 正常退出并显示 `Exited (0)` 是预期行为。
 
----
+默认访问地址：
 
-## 🔑 环境变量
+- 前端：<http://localhost:14726/>
+- API 文档：<http://localhost:14726/docs>
+- 服务健康接口：<http://localhost:14726/health>
 
-完整清单见 [`.env.example`](.env.example),关键项如下:
+先在前端注册并登录，再创建对话。健康接口只表示 Web 服务已启动，不保证所有外部 API 可用。
 
-| 变量 | 说明 |
-|------|------|
-| `DASHSCOPE_API_KEY` | 阿里云 DashScope API Key(必填) |
-| `QWEN_MODEL_NAME` | 模型名,默认 `qwen-max` |
-| `LANGSMITH_API_KEY` | LangSmith 追踪 Key(可选,用于链路调试) |
-| `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | PostgreSQL 连接信息 |
-| `REDIS_HOST` / `REDIS_PORT` / `REDIS_DB` / `REDIS_PASSWORD` | Redis 连接信息 |
-| `AMAP_API_KEY` | 高德地图 API Key(天气 / 地图) |
-| `TAVILY_API_KEY` | Tavily 搜索 API Key |
-| `VARIFLIGHT_API_KEY` | Variflight 航班 API Key |
-| `AIGOHOTEL_MCP_API` | AIGOHOTEL 酒店获取 API |
-| `JWT_SECRET_KEY` | JWT 签名密钥(生产环境务必设置强随机值) |
-| `APP_PORT` | 服务端口,默认 `14726` |
-
----
-
-## 📡 API 接口
-
-所有接口前缀均为 `/api/v1`:
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/users/register` | 用户注册 |
-| POST | `/users/login` | 用户登录(返回 JWT) |
-| GET | `/users/me` | 获取当前用户信息 |
-| POST | `/conversations` | 创建会话 |
-| GET | `/conversations` | 会话列表 |
-| GET | `/conversations/{id}` | 会话详情 |
-| PATCH | `/conversations/{id}` | 更新会话(标题 / 状态) |
-| DELETE | `/conversations/{id}` | 删除会话(软删除) |
-| POST | `/chat/stream/{conversation_id}` | 流式对话(SSE) |
-| GET | `/chat/history/{conversation_id}` | 会话历史消息 |
-
-对话接口返回 SSE 事件:`token`(增量文本)、`tool_call`(工具调用)、`done`、`error`。
-
----
-
-## 🧪 测试
+如需提前建立 RAG 索引：
 
 ```bash
-pytest
+docker compose exec backend python -m scripts.init_rag
 ```
 
-测试覆盖多 Agent 流程、RAG、MCP、目的地路由等模块,详见 [`tests/`](tests/)。
+查看状态、日志或停止服务：
 
----
+```bash
+docker compose ps -a
+docker compose logs --tail=100 init-db backend
+docker compose down
+```
 
-## ⚠️ 安全须知
+PostgreSQL / Redis 数据保存到命名卷，MD / 向量库 / 日志保存在本地挂载目录。普通 `down` 保留数据库卷。默认端口仅绑定本机；可以通过 `.env` 的 `APP_PORT` 修改浏览器访问端口，容器内后端端口保持 14726。更改访问端口时也更新 `CORS_ORIGINS`。
 
-- 本项目含多个第三方服务密钥,请通过 `.env` 注入,不要硬编码在源码中
-- 生产环境请务必设置强随机 `JWT_SECRET_KEY` 并关闭 `DEBUG`
-- 若曾误将 `.env` 泄露,请及时在各平台轮换对应 API Key
+## 本地 Python 运行
 
----
+推荐 Python 3.12，与 Docker 镜像保持一致。请在**仓库根目录**执行以下命令，不要先 `cd scripts`。虚拟环境需要在当前机器重新创建，不能复制作者的 `.venv`。
 
-## 📄 License
+Windows PowerShell：
 
-本项目为学习 / 演示用途,暂未指定开源许可证。如需引用或二次开发,请先联系作者。
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+Linux / macOS：
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+按上面的步骤复制、填写 `.env`。可以单独启动 Compose 提供的数据库与缓存：
+
+```bash
+docker compose up -d postgres redis
+```
+
+或者使用自己已有的 PostgreSQL（安装 pgvector）和 Redis，修改 `.env` 的连接信息。数据库用户需要有建表和创建 `vector` 扩展的权限。内置 Redis 使用空密码。
+
+初始化：
+
+```bash
+python -m scripts.init_db
+python -m scripts.init_rag
+```
+
+Windows：
+
+```powershell
+python -m app.run
+```
+
+Linux / macOS：
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 14726
+```
+
+Windows 启动脚本读取 `.env` 的 `APP_HOST` / `APP_PORT`，并设置 Psycopg 异步连接所需的 Selector 事件循环。如果日志显示 Windows stdio 子进程不可用，可优先使用 Docker 运行 MCP 服务。
+
+## 外部接口与配置
+
+| 配置 | 用途与要求 |
+| --- | --- |
+| `DASHSCOPE_API_KEY` | 必填：Qwen 聊天和 DashScope Embedding |
+| `QWEN_MODEL_NAME` / `QWEN_BASE_URL` | 主聊天模型，默认 `qwen-max` 和 DashScope 兼容地址 |
+| `POSTGRES_*` | 用户、对话、Checkpointer 和 Store；Compose 内自动使用 postgres 主机 |
+| `REDIS_*` | 缓存；Compose 内自动使用 redis 主机和空密码 |
+| `JWT_SECRET_KEY` | 建议填写独立随机密钥；当前代码未填时会使用 DashScope Key 签名 |
+| `LANGSMITH_API_KEY` / `LANGSMITH_TRACING` | 可选追踪，默认 `false` |
+| `AMAP_API_KEY` | 高德天气、地图和路线 |
+| `TAVILY_API_KEY` | 联网搜索 |
+| `VARIFLIGHT_API_KEY` | 航班查询 |
+| `AIGOHOTEL_MCP_API` | 酒店 MCP 查询授权 |
+
+缺少外部密钥、第三方 MCP 服务连接失败或网络受限时，相应查询功能会受限。提供知识库并不等于自带这些服务的授权，也不能保证真实票价、余票或酒店实时库存。
+
+MCP 初始化会跳过未配置密钥的高德、航班和酒店远程服务；自建天气 / 搜索和 12306 按服务发现工具，并限制单个服务发现等待时间。某个服务失败不会清空其他成功加载的工具。自建服务中的真实查询仍需要对应 API Key。
+
+## 项目结构
+
+```text
+app/
+├── agents/          # 主 Agent、目的地路由与交通子 Agent
+├── api/             # 注册、登录、对话和 SSE 聊天
+├── core/            # 状态、中间件、Checkpointer、Store
+├── mcp_core/        # MCP 客户端与天气 / 搜索服务
+├── rag/             # MD 加载、切分、索引、混合检索与重排序
+├── tools/           # Agent 工具
+├── models/          # SQLAlchemy 数据模型
+└── config.py        # 环境配置
+scripts/             # 数据库和 RAG 初始化
+data/documents/      # 作者提供的 24 篇 Markdown 知识库
+zhixing.html         # 前端，后端通过 / 提供
+```
+
+## API 与测试
+
+API 前缀为 `/api/v1`，包含 `/users`、`/conversations` 和 `/chat`；详细请求格式见 Swagger `/docs`。聊天流返回 `token`、`tool_call`、`done` 和 `error` 等 SSE 事件。
+
+`tests/` 中既有单元检查，也有访问真实 LLM / MCP / 数据库的集成测试。执行全部 `pytest` 前需要配置相应服务，可能调用付费接口。
+
+验证本次可移植性修正可执行以下离线测试，使用本地模拟 Embedding 和 MCP，不调用云端接口，也不启动数据库：
+
+```bash
+python -m pytest tests/test_rag_portability.py -q
+```
+
+## 使用范围
+
+本项目用于学习与演示，暂未指定开源许可证；上传 GitHub 不代表自动授予二次分发授权。自写知识库属于项目提供的演示内容，使用前请核实信息时效性。

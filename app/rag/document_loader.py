@@ -1,7 +1,6 @@
 """
 文档加载与预处理
 """
-import os
 from pathlib import Path
 from typing import List
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
@@ -35,7 +34,7 @@ class DocumentManager:
             str(destinations_dir),
             glob="**/*.md",
             loader_cls=TextLoader,
-            loader_kwargs={"autodetect_encoding": True} # 自动检测文件编码（避免乱码）
+            loader_kwargs={"encoding": "utf-8"}
         )
 
         documents = loader.load()
@@ -43,6 +42,7 @@ class DocumentManager:
 
         # 添加元数据
         for doc in documents:
+            doc.metadata["source"] = Path(doc.metadata["source"]).relative_to(self.base_dir).as_posix()
             doc.metadata["source_type"] = "destination_guide"
             doc.metadata["category"] = "destinations"
 
@@ -60,13 +60,14 @@ class DocumentManager:
             str(food_dir),
             glob="**/*.md",
             loader_cls=TextLoader,
-            loader_kwargs={"autodetect_encoding": True}
+            loader_kwargs={"encoding": "utf-8"}
         )
 
         documents = loader.load()
         app_logger.info(f"加载了 {len(documents)} 个目的地文档")
 
         for doc in documents:
+            doc.metadata["source"] = Path(doc.metadata["source"]).relative_to(self.base_dir).as_posix()
             doc.metadata["source_type"] = "food_guide"
             doc.metadata["category"] = "food"
 
@@ -85,13 +86,23 @@ class DocumentManager:
             str(accommodation_dir),
             glob="**/*.md",
             loader_cls=TextLoader,
-            loader_kwargs={"autodetect_encoding": True}
+            loader_kwargs={"encoding": "utf-8"}
         )
         documents = loader.load()
         app_logger.info(f"加载了 {len(documents)} 个目的地文档")
 
         for doc in documents:
+            doc.metadata["source"] = Path(doc.metadata["source"]).relative_to(self.base_dir).as_posix()
             doc.metadata["source_type"] = "accommodation"
             doc.metadata["category"] = "accommodation"
 
         return documents
+
+    def load_all_documents(self) -> List[Document]:
+        """按稳定顺序加载三类知识库，供初始化脚本和运行时共用。"""
+        documents = [
+            *self.load_destination_documents(),
+            *self.load_food_documents(),
+            *self.load_accommodation_documents(),
+        ]
+        return sorted(documents, key=lambda doc: doc.metadata["source"])

@@ -40,14 +40,10 @@ def _build_rag_pipeline() -> AdvancedRAGPipeline:
 
     # 1. 加载文档
     doc_manager = DocumentManager()
-    documents = [
-        *doc_manager.load_destination_documents(),
-        *doc_manager.load_food_documents(),
-        *doc_manager.load_accommodation_documents(),
-    ]
+    documents = doc_manager.load_all_documents()
 
     if not documents:
-        app_logger.warning("⚠️ 未找到知识库文档，RAG 功能不可用")
+        raise RuntimeError("知识库为空，请在 data/documents/ 的三类目录中添加 UTF-8 Markdown 文件")
 
     # 2. 切分文档
     _parent_splitter = AdvancedParentDocumentSplitter()
@@ -55,14 +51,7 @@ def _build_rag_pipeline() -> AdvancedRAGPipeline:
 
     # 3. 加载或创建向量数据库
     vs_manager = VectorStoreManager()
-    try:
-        vectorstore = vs_manager.load_vectorstore()
-        app_logger.info("✅ 向量数据库加载成功")
-    except Exception as exc:
-        app_logger.warning(f"向量数据库加载失败，将重新创建: {exc}")
-        if not child_docs:
-            raise RuntimeError("知识库为空，无法创建向量数据库") from exc
-        vectorstore = vs_manager.create_vectorstore(child_docs)
+    vectorstore = vs_manager.create_vectorstore(child_docs)
 
     # 4. 创建 RAG 管道
     pipeline = AdvancedRAGPipeline(
