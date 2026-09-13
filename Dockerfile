@@ -36,7 +36,7 @@ COPY --from=builder /opt/venv /opt/venv
 COPY app /app/app
 COPY scripts /app/scripts
 COPY data /app/data
-COPY zhixing.html /app/zhixing.html
+COPY traveling.html /app/traveling.html
 
 # 设置环境变量
 ENV PATH="/opt/venv/bin:$PATH"

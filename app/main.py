@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="旅行规划系统",
+    title="Traveling",
     description="企业级多 Agent 旅行规划服务",
     version="1.0.0",
     lifespan=lifespan
@@ -73,13 +73,13 @@ app.include_router(chat.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
-    return FileResponse(Path(__file__).resolve().parent.parent / "zhixing.html")
+    return FileResponse(Path(__file__).resolve().parent.parent / "traveling.html")
 
 
 @app.get("/health")
 async def health():
     return {
-        "service": "Travel Planner",
+        "service": "Traveling",
         "docs": "/docs",
         "status": "healthy",
         "version": "1.0.0"

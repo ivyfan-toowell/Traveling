@@ -1,12 +1,12 @@
-﻿# 知行 ZhiXing · 智能旅行规划助手
+# Traveling
 
-基于 LangGraph / LangChain 多 Agent、RAG 和 MCP 的旅行规划学习项目。后端使用 FastAPI，聊天通过 SSE 返回；前端为单文件页面 `zhixing.html`。
+基于 LangGraph / LangChain 多 Agent、RAG 和 MCP 的旅行规划学习项目。后端使用 FastAPI，聊天通过 SSE 返回；前端为单文件页面 `traveling.html`。
 
 支持需求收集、目的地推荐、交通协调、住宿与美食建议，以及行程和预算报告。对话状态、用户和长期记忆保存在 PostgreSQL 中，RAG 索引使用本地 Chroma。
 
 ## 项目架构
 
-[![知行项目架构图：API、Agent 编排、RAG、MCP 与持久化](docs/assets/architecture.png)](docs/assets/architecture.png)
+[![Traveling 项目架构图：API、Agent 编排、RAG、MCP 与持久化](docs/assets/architecture.png)](docs/assets/architecture.png)
 
 点击图片可查看大图。主规划流程由一个 Travel Agent 和步骤中间件驱动；目的地 Router 按查询需求分发 Explore / Weather 节点，交通 Coordinator 调用航班、火车、自驾子 Agent。主 Agent 也可直接使用 RAG、MCP 和长期记忆工具。
 
@@ -199,7 +199,7 @@ app/
 └── config.py        # 环境配置
 scripts/             # 数据库和 RAG 初始化
 data/documents/      # 作者提供的 24 篇 Markdown 知识库
-zhixing.html         # 前端，后端通过 / 提供
+traveling.html         # 前端，后端通过 / 提供
 ```
 
 ## API 与测试

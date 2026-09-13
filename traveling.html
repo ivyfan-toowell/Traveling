@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>知行 ZhiXing - 您的智能旅伴</title>
+    <title>Traveling</title>
     <!-- 引入 Google Fonts: Noto Serif SC (宋体-知性), Noto Sans SC (黑体-现代), Playfair Display (英文衬线) -->
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500&family=Noto+Serif+SC:wght@500;700&family=Playfair+Display:wght@600;700&display=swap"
@@ -17,7 +17,7 @@
 
     <style>
       :root {
-        /* 配色方案：知行 - 大地与海洋 */
+        /* 配色方案：Traveling - 大地与海洋 */
         --primary: #1a4d54; /* 深黛绿 - 沉稳 */
         --primary-light: #2c6e7a;
         --accent: #c28e5c; /* 古铜金 - 高级感强调色 */
@@ -809,7 +809,7 @@
         <div class="stamp-decoration">VISA</div>
 
         <div class="auth-header">
-          <div class="auth-logo"><i class="fa-solid fa-compass"></i>知行</div>
+          <div class="auth-logo"><i class="fa-solid fa-compass"></i>Traveling</div>
           <p class="auth-subtitle">
             Read Thousands of Books, Travel Thousands of Miles
           </p>
@@ -873,7 +873,7 @@
       <aside class="sidebar glass-card">
         <div class="sidebar-header">
           <div class="sidebar-logo-text">
-            <i class="fa-solid fa-mountain-sun"></i> 知行
+            <i class="fa-solid fa-mountain-sun"></i> Traveling
           </div>
           <div class="user-passport">
             <div class="user-avatar-frame" id="userAvatar">User</div>
@@ -923,7 +923,7 @@
             <div class="welcome-logo">
               <i class="fa-solid fa-paper-plane"></i>
             </div>
-            <h3 class="welcome-title">欢迎使用 知行</h3>
+            <h3 class="welcome-title">欢迎使用 Traveling</h3>
             <p class="welcome-text">
               告诉我你想去哪里？我可以帮你规划路线、寻找隐秘的沙滩、预订最棒的日落景观位。
             </p>
@@ -1030,7 +1030,7 @@
             state.user = data.user;
             localStorage.setItem("token", state.token);
             localStorage.setItem("user", JSON.stringify(state.user));
-            showToast(isRegister ? "欢迎加入知行！" : "欢迎回来！");
+            showToast(isRegister ? "欢迎加入 Traveling！" : "欢迎回来！");
             hideAuthOverlay();
             updateUserInfo();
             loadConversations();
@@ -1206,7 +1206,7 @@
         document.getElementById("chatMessages").innerHTML = `
                 <div class="welcome-screen">
                     <div class="welcome-logo"><i class="fa-solid fa-paper-plane"></i></div>
-                    <h3 class="welcome-title">欢迎使用 知行</h3>
+                    <h3 class="welcome-title">欢迎使用 Traveling</h3>
                     <p class="welcome-text">告诉我你想去哪里？我可以帮你规划路线、寻找隐秘的沙滩、预订最棒的日落景观位。</p>
                 </div>
             `;

@@ -5,12 +5,12 @@
 ## 生成提示词
 
 Use case: infographic-diagram.
-Asset type: a complete raster software architecture diagram for the GitHub README of 知行 ZhiXing travel planner. Create one polished high-resolution landscape image with a white background, crisp readable Chinese typography, simple flat technical blocks, subtle navy/teal/purple/amber color coding, generous whitespace, orthogonal directional arrows, no photographic or decorative scene. This is an engineering diagram: accurate labels and connections are more important than ornament. Aim for 3072x2048 or similarly large landscape resolution. Do not render source code or Mermaid.
+Asset type: a complete raster software architecture diagram for the GitHub README of Traveling travel planner. Create one polished high-resolution landscape image with a white background, crisp readable Chinese typography, simple flat technical blocks, subtle navy/teal/purple/amber color coding, generous whitespace, orthogonal directional arrows, no photographic or decorative scene. This is an engineering diagram: accurate labels and connections are more important than ornament. Aim for 3072x2048 or similarly large landscape resolution. Do not render source code or Mermaid.
 
-Title verbatim: "知行 ZhiXing · 智能旅行规划助手"
+Title verbatim: "Traveling"
 Subtitle: "项目架构 · LangGraph / LangChain + FastAPI + RAG + MCP"
 
-Arrange four main horizontal tiers with clearly labeled subsystem containers. Tier 1 top full width: user icon "用户" -> "前端 zhixing.html" -> "FastAPI · REST / SSE". REST request forward and SSE response back. FastAPI has small endpoint boxes "用户认证 /users", "会话管理 /conversations", "流式聊天 /chat", and "JWT + bcrypt". Show health label "/health" small separate.
+Arrange four main horizontal tiers with clearly labeled subsystem containers. Tier 1 top full width: user icon "用户" -> "前端 traveling.html" -> "FastAPI · REST / SSE". REST request forward and SSE response back. FastAPI has small endpoint boxes "用户认证 /users", "会话管理 /conversations", "流式聊天 /chat", and "JWT + bcrypt". Show health label "/health" small separate.
 
 Tier 2 central orchestration large container "Agent 编排层".
 Main left-center box: "Travel Agent" subtext "Qwen · 单主 Agent + 步骤中间件".
@@ -50,3 +50,8 @@ Make only these engineering accuracy corrections:
 3. Section numbering must be sequential: 1 用户与 API 接入层, 2 Agent 编排层, 3 RAG 知识检索, 4 业务工具与记忆, 5 MCP 外部能力, 6 持久化与运行环境. Put 5 in the purple MCP section badge and change the final persistent section badge from 4 to 6.
 4. In RAG indexing, Chroma connects to the query box Chroma 向量 + BM25 (vector candidate retrieval), not to 带来源的上下文. Remove the vertical arrow between the Chroma 子文档向量索引 box and 带来源的上下文. The retrieved context comes from 父文档映射 + 上下文重排. Draw a small thin connecting line from the Chroma index box to Chroma 向量 + BM25 routed within RAG area, keeping labels unobstructed.
 Do not add or remove any other components. No extra footer. Output one polished image at the same landscape aspect ratio.
+
+
+## 品牌命名修订
+
+使用内置 imagegen 编辑：将图片主标题改为 Traveling，前端文件名改为 traveling.html，其余模块、文字和连线保持原样。
