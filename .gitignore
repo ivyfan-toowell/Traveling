@@ -1,0 +1,47 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ===== 虚拟环境 =====
+.venv/
+.venv1/
+venv/
+env/
+
+# ===== 环境变量与密钥（切勿提交真实密钥）=====
+.env
+.env.local
+.env.*.local
+
+# ===== IDE / 编辑器 =====
+.idea/
+.vscode/
+*.iml
+
+# ===== 测试与缓存 =====
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ===== UV =====
+.uv-*
+.docker-audit/
+
+# ===== 日志 =====
+logs/
+*.log
+
+# ===== 生成的数据（向量库由 init_rag.py 重建）=====
+**/vectorstore/
+chroma.sqlite3
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db

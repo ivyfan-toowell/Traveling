@@ -1,0 +1,13 @@
+.env
+.git
+.idea
+.vscode
+.venv
+.pytest_cache
+.uv-*
+.docker-audit
+**/__pycache__
+**/*.pyc
+**/*.log
+logs
+tests

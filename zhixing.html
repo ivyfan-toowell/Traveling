@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>知行 ZhiXing - 您的智能旅伴</title>
+    <!-- 引入 Google Fonts: Noto Serif SC (宋体-知性), Noto Sans SC (黑体-现代), Playfair Display (英文衬线) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500&family=Noto+Serif+SC:wght@500;700&family=Playfair+Display:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- 引入 FontAwesome 图标库 -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <style>
+      :root {
+        /* 配色方案：知行 - 大地与海洋 */
+        --primary: #1a4d54; /* 深黛绿 - 沉稳 */
+        --primary-light: #2c6e7a;
+        --accent: #c28e5c; /* 古铜金 - 高级感强调色 */
+        --accent-hover: #a67545;
+
+        --sand-bg: #f5f2eb; /* 米白纸张色 */
+        --map-line: rgba(26, 77, 84, 0.08); /* 地图纹理色 */
+
+        --glass-bg: rgba(255, 255, 255, 0.75);
+        --glass-border: rgba(255, 255, 255, 0.6);
+        --glass-shadow: 0 8px 32px 0 rgba(26, 77, 84, 0.08);
+
+        --text-main: #2c3e50;
+        --text-serif: #1a4d54;
+        --text-light: #7f8c8d;
+        --white: #ffffff;
+
+        --radius-lg: 24px;
+        --radius-md: 16px;
+        --radius-sm: 8px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body {
+        font-family: "Noto Sans SC", sans-serif;
+        color: var(--text-main);
+        height: 100vh;
+        overflow: hidden;
+        background-color: var(--sand-bg);
+        /* 细微的纸张噪点纹理 */
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+      }
+
+      /* === 背景装饰元素 === */
+
+      /* 1. 等高线地图背景 */
+      .bg-map-lines {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' viewBox='0 0 800 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%231A4D54' stroke-width='1' stroke-opacity='0.08'%3E%3Cpath d='M0 300 C 200 400 400 200 800 350' /%3E%3Cpath d='M0 320 C 220 420 420 220 800 370' /%3E%3Cpath d='M0 340 C 240 440 440 240 800 390' /%3E%3Cpath d='M0 100 C 300 0 500 150 800 50' /%3E%3Cpath d='M0 120 C 320 20 520 170 800 70' /%3E%3Cpath d='M-100 200 C 200 100 600 300 900 200' stroke-dasharray='10,10' stroke-opacity='0.05' /%3E%3C/g%3E%3C/svg%3E");
+        background-size: cover;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* 2. 飞行动画 */
+      .plane-container {
+        position: fixed;
+        top: 20%;
+        left: -100px;
+        z-index: 0;
+        opacity: 0.8;
+        animation: flyAcross 60s linear infinite;
+      }
+
+      .plane-icon {
+        font-size: 24px;
+        color: var(--accent);
+        transform: rotate(15deg);
+      }
+
+      .plane-trail {
+        position: absolute;
+        top: 12px;
+        right: 20px;
+        width: 100px;
+        height: 2px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(194, 142, 92, 0.3)
+        );
+      }
+
+      @keyframes flyAcross {
+        0% {
+          transform: translate(-100px, 0);
+        }
+        100% {
+          transform: translate(calc(100vw + 200px), -100px);
+        }
+      }
+
+      /* 主布局 */
+      .app-container {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        height: 100vh;
+        padding: 24px;
+        gap: 24px;
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      /* 玻璃拟态卡片通用样式 */
+      .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--glass-shadow);
+      }
+
+      /* === 登录/注册 === */
+      .auth-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(26, 77, 84, 0.3);
+        backdrop-filter: blur(8px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+        transition: opacity 0.3s ease;
+      }
+
+      .auth-overlay.hidden {
+        display: none;
+      }
+
+      .auth-card {
+        width: 400px;
+        padding: 40px;
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.95);
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* 邮票装饰 */
+      .stamp-decoration {
+        position: absolute;
+        top: -20px;
+        right: -20px;
+        width: 100px;
+        height: 100px;
+        border: 2px dashed var(--accent);
+        border-radius: 50%;
+        opacity: 0.2;
+        transform: rotate(20deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Playfair Display", serif;
+        color: var(--accent);
+        font-weight: bold;
+        pointer-events: none;
+      }
+
+      .auth-header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .auth-logo {
+        font-family: "Noto Serif SC", serif;
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 8px;
+        letter-spacing: 4px;
+      }
+
+      .auth-logo i {
+        font-size: 24px;
+        color: var(--accent);
+        margin-right: 8px;
+      }
+
+      .auth-subtitle {
+        font-family: "Playfair Display", serif;
+        color: var(--text-light);
+        font-style: italic;
+      }
+
+      .auth-tabs {
+        display: flex;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 24px;
+      }
+
+      .auth-tab {
+        flex: 1;
+        padding: 12px;
+        background: none;
+        border: none;
+        font-size: 15px;
+        color: var(--text-light);
+        cursor: pointer;
+        position: relative;
+      }
+
+      .auth-tab.active {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .auth-tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: var(--primary);
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px; /* 略微方正，更像传统表单 */
+        background: #fff;
+        transition: all 0.3s;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(26, 77, 84, 0.1);
+      }
+
+      .auth-btn {
+        width: 100%;
+        padding: 14px;
+        background: var(--primary);
+        color: var(--white);
+        border: none;
+        border-radius: 4px;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      .auth-btn:hover {
+        background: var(--primary-light);
+      }
+
+      .register-fields {
+        display: none;
+      }
+      .register-fields.show {
+        display: block;
+      }
+
+      .api-config {
+        margin-top: 20px;
+        text-align: center;
+        font-size: 12px;
+      }
+      .api-config summary {
+        cursor: pointer;
+        color: var(--text-light);
+      }
+      .api-config input {
+        margin-top: 5px;
+        padding: 5px;
+        width: 80%;
+        text-align: center;
+      }
+
+      /* === 侧边栏 (类似护照/手账本) === */
+      .sidebar {
+        width: 280px;
+        border-radius: var(--radius-lg);
+        display: flex;
+        flex-direction: column;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--white);
+        box-shadow: var(--glass-shadow);
+      }
+
+      .sidebar-header {
+        padding: 32px 24px 20px;
+        border-bottom: 1px dashed rgba(0, 0, 0, 0.1); /* 虚线像票据 */
+      }
+
+      .sidebar-logo-text {
+        font-family: "Noto Serif SC", serif;
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--primary);
+        letter-spacing: 2px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .user-passport {
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: #f0f4f5;
+        border-radius: 8px;
+        border: 1px solid #e0e6e8;
+      }
+
+      .user-avatar-frame {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid var(--accent); /* 金色边框 */
+      }
+
+      .user-details h4 {
+        font-size: 14px;
+        color: var(--primary);
+      }
+      .user-details span {
+        font-size: 11px;
+        color: var(--text-light);
+        text-transform: uppercase;
+      }
+
+      .new-chat-btn {
+        margin: 20px 24px;
+        padding: 12px;
+        border: 1px solid var(--primary);
+        background: transparent;
+        color: var(--primary);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-weight: 600;
+      }
+
+      .new-chat-btn:hover {
+        background: var(--primary);
+        color: var(--white);
+      }
+
+      .conversations-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 16px;
+      }
+
+      .section-label {
+        padding: 0 8px 8px;
+        font-size: 11px;
+        color: var(--text-light);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .conversation-item {
+        padding: 14px;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .conversation-item:hover {
+        background: var(--white);
+      }
+
+      .conversation-item.active {
+        background: var(--white);
+        border-left-color: var(--accent);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      .conversation-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-main);
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .conversation-time {
+        font-size: 11px;
+        color: var(--text-light);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .logout-btn {
+        margin: 20px;
+        padding: 10px;
+        border: none;
+        background: none;
+        color: var(--text-light);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+      }
+      .logout-btn:hover {
+        color: #d63031;
+      }
+
+      /* === 聊天主窗口 === */
+      .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* 聊天背景水印 - 地球仪 */
+      .chat-watermark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 300px;
+        color: var(--primary);
+        opacity: 0.03;
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .chat-header {
+        padding: 20px 32px;
+        background: rgba(255, 255, 255, 0.9);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .chat-title-group {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .chat-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        background: var(--primary);
+        color: var(--accent);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        box-shadow: 0 4px 12px rgba(26, 77, 84, 0.2);
+      }
+
+      .chat-info h2 {
+        font-family: "Noto Serif SC", serif;
+        font-size: 20px;
+        color: var(--text-serif);
+      }
+
+      .chat-info p {
+        font-size: 12px;
+        color: var(--text-light);
+        margin-top: 2px;
+      }
+
+      .location-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--accent);
+        font-weight: 600;
+        background: rgba(194, 142, 92, 0.1);
+        padding: 6px 12px;
+        border-radius: 20px;
+      }
+
+      .chat-messages {
+        flex: 1;
+        padding: 32px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      /* 消息气泡 - 模拟信纸/卡片 */
+      .message {
+        display: flex;
+        gap: 16px;
+        max-width: 800px;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.user {
+        flex-direction: row-reverse;
+        align-self: flex-end;
+      }
+
+      .message-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 14px;
+      }
+
+      .message.user .message-avatar {
+        background: var(--accent);
+        color: white;
+      }
+      .message.assistant .message-avatar {
+        background: var(--primary);
+        color: white;
+      }
+
+      .message-content {
+        padding: 16px 24px;
+        border-radius: 12px;
+        font-size: 15px;
+        line-height: 1.8;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        position: relative;
+      }
+
+      .message.assistant .message-content {
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        color: var(--text-main);
+        border-top-left-radius: 2px;
+      }
+
+      /* 装饰助手消息：像一张票据 */
+      .message.assistant .message-content::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 15px;
+        bottom: 15px;
+        width: 3px;
+        background: var(--accent);
+        border-radius: 0 2px 2px 0;
+        opacity: 0.5;
+      }
+
+      .message.user .message-content {
+        background: var(--primary);
+        color: white;
+        border-top-right-radius: 2px;
+      }
+
+      /* 欢迎屏幕 */
+      .welcome-screen {
+        text-align: center;
+        margin: auto;
+        max-width: 500px;
+        padding: 40px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 20px;
+        border: 1px dashed var(--primary); /* 虚线框 */
+      }
+
+      .welcome-logo {
+        font-size: 50px;
+        color: var(--primary);
+        margin-bottom: 20px;
+      }
+
+      .welcome-title {
+        font-family: "Noto Serif SC", serif;
+        font-size: 28px;
+        margin-bottom: 10px;
+        color: var(--text-serif);
+      }
+
+      .welcome-text {
+        color: var(--text-light);
+        line-height: 1.6;
+      }
+
+      /* 输入区域 */
+      .chat-input-area {
+        padding: 24px 32px;
+        background: rgba(255, 255, 255, 0.9);
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+      }
+
+      .chat-input-wrapper {
+        display: flex;
+        align-items: flex-end;
+        background: var(--white);
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 8px 8px 8px 16px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        transition: border 0.3s;
+      }
+
+      .chat-input-wrapper:focus-within {
+        border-color: var(--primary);
+      }
+
+      .chat-input {
+        flex: 1;
+        border: none;
+        padding: 10px 0;
+        font-family: inherit;
+        font-size: 15px;
+        resize: none;
+        max-height: 120px;
+        background: transparent;
+      }
+
+      .chat-input:focus {
+        outline: none;
+      }
+
+      .send-btn {
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 8px;
+        background: var(--primary);
+        color: var(--accent);
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .send-btn:hover {
+        background: var(--primary-light);
+        color: #fff;
+      }
+      .send-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      /* 加载动画 */
+      .typing-dots {
+        display: flex;
+        gap: 4px;
+        padding: 10px;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        background: var(--primary);
+        border-radius: 50%;
+        opacity: 0.5;
+        animation: bounce 1.4s infinite ease-in-out;
+      }
+      .dot:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+      .dot:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+      @keyframes bounce {
+        0%,
+        80%,
+        100% {
+          transform: scale(0);
+        }
+        40% {
+          transform: scale(1);
+        }
+      }
+
+      /* Toast */
+      .toast {
+        position: fixed;
+        top: 30px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        background: var(--text-main);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 50px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        z-index: 1000;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .toast.show {
+        transform: translateX(-50%) translateY(0);
+      }
+      .toast.error {
+        background: #c0392b;
+      }
+
+      /* 响应式 */
+      @media (max-width: 900px) {
+        .app-container {
+          flex-direction: column;
+          padding: 10px;
+        }
+        .sidebar {
+          width: 100%;
+          height: auto;
+          flex-direction: row;
+          align-items: center;
+          padding: 10px;
+        }
+        .sidebar-header {
+          padding: 0;
+          border: none;
+          flex: 1;
+        }
+        .user-passport,
+        .conversations-list,
+        .logout-btn,
+        .section-label {
+          display: none;
+        }
+        .new-chat-btn {
+          margin: 0;
+          padding: 8px;
+          width: 40px;
+          border: none;
+        }
+        .new-chat-btn span {
+          display: none;
+        }
+        .chat-header {
+          padding: 15px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 装饰背景 -->
+    <div class="bg-map-lines"></div>
+    <div class="plane-container">
+      <div class="plane-trail"></div>
+      <i class="fa-solid fa-plane plane-icon"></i>
+    </div>
+
+    <!-- 登录弹窗 -->
+    <div class="auth-overlay" id="authOverlay">
+      <div class="auth-card glass-card">
+        <!-- 装饰性邮戳 -->
+        <div class="stamp-decoration">VISA</div>
+
+        <div class="auth-header">
+          <div class="auth-logo"><i class="fa-solid fa-compass"></i>知行</div>
+          <p class="auth-subtitle">
+            Read Thousands of Books, Travel Thousands of Miles
+          </p>
+        </div>
+
+        <div class="auth-tabs">
+          <button
+            class="auth-tab active"
+            data-tab="login"
+            onclick="switchAuthTab('login')"
+          >
+            登 录
+          </button>
+          <button
+            class="auth-tab"
+            data-tab="register"
+            onclick="switchAuthTab('register')"
+          >
+            注 册
+          </button>
+        </div>
+
+        <form id="authForm" onsubmit="handleAuth(event)">
+          <div class="form-group">
+            <input
+              type="text"
+              id="username"
+              placeholder="通行证 / 用户名"
+              required
+            />
+          </div>
+          <div class="form-group register-fields" id="emailField">
+            <input type="email" id="email" placeholder="电子邮箱" />
+          </div>
+          <div class="form-group">
+            <input
+              type="password"
+              id="password"
+              placeholder="密钥 / 密码"
+              required
+            />
+          </div>
+          <button type="submit" class="auth-btn" id="authBtn">开启旅程</button>
+        </form>
+
+        <details class="api-config">
+          <summary>连接设置</summary>
+          <input
+            type="text"
+            id="apiBase"
+            value=""
+            placeholder="默认使用当前站点"
+          />
+        </details>
+      </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div class="app-container">
+      <!-- 侧边栏：像一本护照 -->
+      <aside class="sidebar glass-card">
+        <div class="sidebar-header">
+          <div class="sidebar-logo-text">
+            <i class="fa-solid fa-mountain-sun"></i> 知行
+          </div>
+          <div class="user-passport">
+            <div class="user-avatar-frame" id="userAvatar">User</div>
+            <div class="user-details">
+              <h4 id="userName">访客</h4>
+              <span>PASSPORT</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="new-chat-btn" onclick="createNewConversation()">
+          <i class="fa-solid fa-route"></i> <span>规划新行程</span>
+        </button>
+
+        <div class="conversations-list">
+          <div class="section-label">Travel Logs</div>
+          <div id="conversationsList"></div>
+        </div>
+
+        <button class="logout-btn" onclick="logout()">
+          <i class="fa-solid fa-power-off"></i> 结束本次旅程
+        </button>
+      </aside>
+
+      <!-- 聊天主窗口 -->
+      <main class="chat-main glass-card">
+        <!-- 水印 -->
+        <i class="fa-solid fa-earth-asia chat-watermark"></i>
+
+        <div class="chat-header">
+          <div class="chat-title-group">
+            <div class="chat-icon-wrapper">
+              <i class="fa-solid fa-robot"></i>
+            </div>
+            <div class="chat-info">
+              <h2 id="chatTitle">行程助手</h2>
+              <p>AI Travel Assistant</p>
+            </div>
+          </div>
+          <div class="location-badge">
+            <i class="fa-solid fa-location-dot"></i> 准备出发
+          </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+          <div class="welcome-screen">
+            <div class="welcome-logo">
+              <i class="fa-solid fa-paper-plane"></i>
+            </div>
+            <h3 class="welcome-title">欢迎使用 知行</h3>
+            <p class="welcome-text">
+              告诉我你想去哪里？我可以帮你规划路线、寻找隐秘的沙滩、预订最棒的日落景观位。
+            </p>
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <div class="chat-input-wrapper">
+            <textarea
+              class="chat-input"
+              id="chatInput"
+              placeholder="输入目的地，例如：马尔代夫的水上飞机体验..."
+              rows="1"
+              onkeydown="handleInputKeydown(event)"
+            ></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+              <i class="fa-regular fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div class="toast" id="toast">
+      <i class="fa-solid fa-info-circle"></i> <span id="toastMsg"></span>
+    </div>
+
+    <script>
+      // === 逻辑代码保持不变，仅适配样式类名 ===
+
+      let state = {
+        token: localStorage.getItem("token") || "",
+        user: JSON.parse(localStorage.getItem("user") || "null"),
+        currentConversationId: null,
+        conversations: [],
+        isLoading: false,
+      };
+
+      const getApiBase = () => {
+        const configuredBase = document.getElementById("apiBase").value.trim();
+        return (configuredBase || window.location.origin).replace(/\/$/, "");
+      };
+
+      document.addEventListener("DOMContentLoaded", () => {
+        if (state.token && state.user) {
+          hideAuthOverlay();
+          updateUserInfo();
+          loadConversations();
+        }
+        autoResizeTextarea();
+      });
+
+      function switchAuthTab(tab) {
+        const tabs = document.querySelectorAll(".auth-tab");
+        const emailField = document.getElementById("emailField");
+        const emailInput = document.getElementById("email");
+        const authBtn = document.getElementById("authBtn");
+
+        tabs.forEach((t) => t.classList.remove("active"));
+        document.querySelector(`[data-tab="${tab}"]`).classList.add("active");
+
+        if (tab === "register") {
+          emailField.classList.add("show");
+          emailInput.required = true;
+          authBtn.textContent = "注册通行证";
+        } else {
+          emailField.classList.remove("show");
+          emailInput.required = false;
+          authBtn.textContent = "开启旅程";
+        }
+      }
+
+      async function handleAuth(e) {
+        e.preventDefault();
+        const isRegister =
+          document.querySelector(".auth-tab.active").dataset.tab === "register";
+        const username = document.getElementById("username").value;
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const btn = document.getElementById("authBtn");
+
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 验证中...';
+        btn.disabled = true;
+
+        try {
+          let response;
+          const endpoint = isRegister
+            ? "/api/v1/users/register"
+            : "/api/v1/users/login";
+          const body = isRegister
+            ? { username, email, password }
+            : { username, password };
+
+          response = await fetch(`${getApiBase()}${endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            state.token = data.access_token;
+            state.user = data.user;
+            localStorage.setItem("token", state.token);
+            localStorage.setItem("user", JSON.stringify(state.user));
+            showToast(isRegister ? "欢迎加入知行！" : "欢迎回来！");
+            hideAuthOverlay();
+            updateUserInfo();
+            loadConversations();
+          } else {
+            showToast(data.detail || "操作失败", true);
+          }
+        } catch (error) {
+          showToast("网络连接异常", true);
+        } finally {
+          btn.innerHTML = isRegister ? "注册通行证" : "开启旅程";
+          btn.disabled = false;
+        }
+      }
+
+      function hideAuthOverlay() {
+        document.getElementById("authOverlay").classList.add("hidden");
+      }
+      function showAuthOverlay() {
+        document.getElementById("authOverlay").classList.remove("hidden");
+      }
+
+      function updateUserInfo() {
+        if (state.user) {
+          document.getElementById("userName").textContent =
+            state.user.username || "旅行者";
+          // 提取首字母
+          const name = state.user.username || state.user.email || "U";
+          document.getElementById("userAvatar").textContent =
+            name[0].toUpperCase();
+        }
+      }
+
+      function logout() {
+        state.token = "";
+        state.user = null;
+        state.currentConversationId = null;
+        state.conversations = [];
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        showAuthOverlay();
+        clearChatMessages();
+        document.getElementById("conversationsList").innerHTML = "";
+        showToast("已退出旅程");
+      }
+
+      async function loadConversations() {
+        try {
+          const response = await fetch(`${getApiBase()}/api/v1/conversations`, {
+            headers: { Authorization: `Bearer ${state.token}` },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            state.conversations = Array.isArray(data)
+              ? data
+              : data.conversations || [];
+            renderConversationsList();
+          } else if (response.status === 401) logout();
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      function renderConversationsList() {
+        const container = document.getElementById("conversationsList");
+        if (state.conversations.length === 0) {
+          container.innerHTML =
+            '<div style="padding:20px; text-align:center; color:var(--text-light); font-size:12px;">暂无行程记录</div>';
+          return;
+        }
+        container.innerHTML = state.conversations
+          .map(
+            (conv) => `
+                <div class="conversation-item ${
+                  conv.id === state.currentConversationId ? "active" : ""
+                }" 
+                     onclick="switchConversation('${conv.id}')">
+                    <div class="conversation-title"><i class="fa-solid fa-map-pin" style="font-size:10px; margin-right:5px; color:var(--accent)"></i>${escapeHtml(
+                      conv.title || "未知行程"
+                    )}</div>
+                    <div class="conversation-time">
+                        <i class="fa-regular fa-clock" style="font-size:10px;"></i> ${formatTime(
+                          conv.updated_at || conv.created_at
+                        )}
+                    </div>
+                </div>
+            `
+          )
+          .join("");
+      }
+
+      async function createNewConversation() {
+        try {
+          const response = await fetch(`${getApiBase()}/api/v1/conversations`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${state.token}`,
+            },
+            body: JSON.stringify({ title: "新行程" }),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            state.currentConversationId = data.id;
+            await loadConversations();
+            clearChatMessages();
+            document.getElementById("chatTitle").textContent = "新行程";
+            showToast("新行程已创建");
+          }
+        } catch (error) {
+          showToast("创建失败", true);
+        }
+      }
+
+      async function switchConversation(id) {
+        state.currentConversationId = id;
+        renderConversationsList();
+
+        // 获取标题
+        try {
+          const res = await fetch(
+            `${getApiBase()}/api/v1/conversations/${id}`,
+            {
+              headers: { Authorization: `Bearer ${state.token}` },
+            }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            document.getElementById("chatTitle").textContent = data.title;
+          }
+        } catch (e) {}
+
+        // 获取历史
+        try {
+          const res = await fetch(`${getApiBase()}/api/v1/chat/history/${id}`, {
+            headers: { Authorization: `Bearer ${state.token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const msgs = Array.isArray(data) ? data : data.messages || [];
+            renderMessages(msgs);
+          } else clearChatMessages();
+        } catch (e) {
+          clearChatMessages();
+        }
+      }
+
+      function renderMessages(messages) {
+        const container = document.getElementById("chatMessages");
+        if (messages.length === 0) {
+          clearChatMessages();
+          return;
+        }
+        container.innerHTML = messages
+          .map(
+            (msg) => `
+                <div class="message ${
+                  msg.role
+                }" id="msg-${Date.now()}-${Math.random()}">
+                    <div class="message-avatar"><i class="fa-solid ${
+                      msg.role === "user" ? "fa-user" : "fa-robot"
+                    }"></i></div>
+                    <div class="message-content">${escapeHtml(
+                      msg.content
+                    )}</div>
+                </div>
+            `
+          )
+          .join("");
+        container.scrollTop = container.scrollHeight;
+      }
+
+      function clearChatMessages() {
+        document.getElementById("chatMessages").innerHTML = `
+                <div class="welcome-screen">
+                    <div class="welcome-logo"><i class="fa-solid fa-paper-plane"></i></div>
+                    <h3 class="welcome-title">欢迎使用 知行</h3>
+                    <p class="welcome-text">告诉我你想去哪里？我可以帮你规划路线、寻找隐秘的沙滩、预订最棒的日落景观位。</p>
+                </div>
+            `;
+      }
+
+      async function sendMessage() {
+        const input = document.getElementById("chatInput");
+        const content = input.value.trim();
+        if (!content || state.isLoading) return;
+
+        if (!state.currentConversationId) {
+          await createNewConversation();
+          if (!state.currentConversationId) return;
+        }
+
+        state.isLoading = true;
+        document.getElementById("sendBtn").disabled = true;
+
+        // 移除欢迎页
+        const welcome = document.querySelector(".welcome-screen");
+        if (welcome) welcome.remove();
+
+        // 用户消息
+        addMessage("user", content);
+        input.value = "";
+        input.style.height = "auto";
+
+        // 助手Loading
+        const loadingId = addLoading();
+
+        try {
+          const res = await fetch(
+            `${getApiBase()}/api/v1/chat/stream/${state.currentConversationId}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${state.token}`,
+              },
+              body: JSON.stringify({ content }),
+            }
+          );
+
+          removeMessage(loadingId);
+
+          if (
+            res.ok &&
+            res.headers.get("content-type")?.includes("event-stream")
+          ) {
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = "";
+            let eventBuffer = "";
+            let streamError = "";
+            const msgId = addMessage("assistant", "");
+
+            while (true) {
+              const { done, value } = await reader.read();
+              eventBuffer += decoder.decode(value || new Uint8Array(), {
+                stream: !done,
+              });
+
+              const events = eventBuffer.split("\n\n");
+              eventBuffer = done ? "" : events.pop() || "";
+
+              for (const event of events) {
+                const data = event
+                  .split("\n")
+                  .filter((line) => line.startsWith("data:"))
+                  .map((line) => line.slice(5).trimStart())
+                  .join("\n");
+
+                if (!data || data === "[DONE]") continue;
+
+                try {
+                  const parsed = JSON.parse(data);
+                  if (parsed.type === "error") {
+                    streamError = parsed.message || "对话处理失败，请稍后重试。";
+                  } else if (parsed.content) {
+                    fullText += parsed.content;
+                    updateMessage(msgId, fullText);
+                  }
+                } catch (error) {
+                  console.error("无法解析服务端事件", error, data);
+                }
+              }
+
+              if (done) break;
+            }
+
+            if (streamError) {
+              updateMessage(msgId, streamError);
+              showToast(streamError, true);
+            } else if (!fullText) {
+              updateMessage(msgId, "暂未收到有效回复，请稍后重试。");
+            }
+          } else {
+            let data = {};
+            try {
+              data = await res.json();
+            } catch (error) {
+              data = { message: `请求失败（HTTP ${res.status}）` };
+            }
+            addMessage(
+              "assistant",
+              data.detail || data.content || data.message || JSON.stringify(data)
+            );
+          }
+        } catch (e) {
+          removeMessage(loadingId);
+          console.error(e);
+          addMessage("assistant", "连接中断，请稍后重试。");
+        }
+
+        state.isLoading = false;
+        document.getElementById("sendBtn").disabled = false;
+      }
+
+      function addMessage(role, text) {
+        const container = document.getElementById("chatMessages");
+        const id = "msg-" + Date.now();
+        const div = document.createElement("div");
+        div.className = `message ${role}`;
+        div.id = id;
+        div.innerHTML = `
+                <div class="message-avatar"><i class="fa-solid ${
+                  role === "user" ? "fa-user" : "fa-robot"
+                }"></i></div>
+                <div class="message-content">${escapeHtml(text)}</div>
+            `;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+        return id;
+      }
+
+      function updateMessage(id, text) {
+        const el = document.getElementById(id);
+        if (el) {
+          el.querySelector(".message-content").innerHTML = escapeHtml(text);
+          document.getElementById("chatMessages").scrollTop =
+            document.getElementById("chatMessages").scrollHeight;
+        }
+      }
+
+      function addLoading() {
+        const container = document.getElementById("chatMessages");
+        const id = "loading-" + Date.now();
+        const div = document.createElement("div");
+        div.className = "message assistant";
+        div.id = id;
+        div.innerHTML = `
+                <div class="message-avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="message-content">
+                    <div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+                </div>
+            `;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+        return id;
+      }
+
+      function removeMessage(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      }
+
+      function handleInputKeydown(e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      }
+
+      function autoResizeTextarea() {
+        const el = document.getElementById("chatInput");
+        el.addEventListener("input", function () {
+          this.style.height = "auto";
+          this.style.height = Math.min(this.scrollHeight, 120) + "px";
+        });
+      }
+
+      function showToast(msg, isError = false) {
+        const t = document.getElementById("toast");
+        document.getElementById("toastMsg").textContent = msg;
+        t.className = `toast show ${isError ? "error" : ""}`;
+        setTimeout(() => t.classList.remove("show"), 3000);
+      }
+
+      function formatTime(str) {
+        if (!str) return "";
+        const d = new Date(str);
+        return `${d.getMonth() + 1}月${d.getDate()}日`;
+      }
+
+      function escapeHtml(text) {
+        if (!text) return "";
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML.replace(/\n/g, "<br>");
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+services:
+  # 后端应用
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: travel_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    # 使用 host 网络模式连接外部 PostgreSQL 和 Redis
+    network_mode: host
+    volumes:
+      - ./data:/app/data  # 挂载数据目录（RAG 文档等）
+      - ./logs:/app/logs  # 挂载日志目录
+    command: ["uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "14726"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:14726/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
